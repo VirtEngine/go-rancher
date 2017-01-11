@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -30,6 +29,8 @@ var (
 
 type ClientOpts struct {
 	Url       string
+	AccountId string
+	Method    string
 	AccessKey string
 	SecretKey string
 	Timeout   time.Duration
@@ -136,18 +137,22 @@ func setupRancherBaseClient(rancherClient *RancherBaseClientImpl, opts *ClientOp
 		return err
 	}
 
+	method := strings.ToUpper(opts.Method)
+	if method == "" {
+		method = "GET"
+	}
+
 	if u.Path == "" || u.Path == "/" {
 		u.Path = "v2-beta"
 	} else if u.Path == "/v1" || strings.HasPrefix(u.Path, "/v1/") {
 		u.Path = strings.Replace(u.Path, "/v1", "/v2-beta", 1)
 	}
 	opts.Url = u.String()
-
 	if opts.Timeout == 0 {
 		opts.Timeout = time.Second * 10
 	}
 	client := &http.Client{Timeout: opts.Timeout}
-	req, err := http.NewRequest("GET", opts.Url, nil)
+	req, err := http.NewRequest(method, opts.Url, nil)
 	if err != nil {
 		return err
 	}
@@ -171,7 +176,7 @@ func setupRancherBaseClient(rancherClient *RancherBaseClientImpl, opts *ClientOp
 	}
 
 	if schemasUrls != opts.Url {
-		req, err = http.NewRequest("GET", schemasUrls, nil)
+		req, err = http.NewRequest(method, schemasUrls, nil)
 		req.SetBasicAuth(opts.AccessKey, opts.SecretKey)
 		if err != nil {
 			return err
@@ -414,18 +419,20 @@ func (rancherClient *RancherBaseClientImpl) doCreate(schemaType string, createOb
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	if !contains(schema.CollectionMethods, "POST") {
-		return errors.New("Resource type [" + schemaType + "] is not creatable")
-	}
-
 	var collectionUrl string
 	collectionUrl, ok = schema.Links[COLLECTION]
-	if !ok {
-		// return errors.New("Failed to find collection URL for [" + schemaType + "]")
-		// This is a hack to address https://github.com/rancher/cattle/issues/254
-		re := regexp.MustCompile("schemas.*")
-		collectionUrl = re.ReplaceAllString(schema.Links[SELF], schema.PluralName)
+	id := rancherClient.Opts.AccountId
+	if id != "" {
+		id = rancherClient.Opts.AccountId + "/"
 	}
+  collectionUrl  =  strings.Replace(collectionUrl, schema.PluralName, "/projects/" + id + schema.PluralName , 1)
+
+	// if !ok {
+	// 	// return errors.New("Failed to find collection URL for [" + schemaType + "]")
+	// 	// This is a hack to address https://github.com/rancher/cattle/issues/254
+	// 	re := regexp.MustCompile("schemas.*")
+	// 	collectionUrl = re.ReplaceAllString(schema.Links[SELF], schema.PluralName)
+	// }
 
 	return rancherClient.doModify("POST", collectionUrl, createObj, respObject)
 }
