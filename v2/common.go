@@ -425,7 +425,7 @@ func (rancherClient *RancherBaseClientImpl) doCreate(schemaType string, createOb
 	if id != "" {
 		id = rancherClient.Opts.AccountId + "/"
 	}
-  collectionUrl  =  strings.Replace(collectionUrl, schema.PluralName, "/projects/" + id + schema.PluralName , 1)
+  collectionUrl  =  strings.Replace(collectionUrl, schema.PluralName, "projects/" + id + schema.PluralName , 1)
 
 	// if !ok {
 	// 	// return errors.New("Failed to find collection URL for [" + schemaType + "]")
