@@ -508,15 +508,17 @@ func (rancherClient *RancherBaseClientImpl) doResourceDelete(schemaType string, 
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	if !contains(schema.ResourceMethods, "DELETE") {
-		return errors.New("Resource type [" + schemaType + "] can not be deleted")
-	}
-
 	selfUrl, ok := existing.Links[SELF]
 	if !ok {
 		return errors.New(fmt.Sprintf("Failed to find self URL of [%v]", existing))
 	}
 
+	id := rancherClient.Opts.AccountId
+	if id != "" {
+		id = rancherClient.Opts.AccountId + "/"
+	}
+  selfUrl  =  strings.Replace(selfUrl, schema.PluralName, "projects/" + id + schema.PluralName , 1)
+	
 	return rancherClient.doDelete(selfUrl)
 }
 
