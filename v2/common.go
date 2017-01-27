@@ -476,6 +476,7 @@ func (rancherClient *RancherBaseClientImpl) ById(schemaType string, id string, r
 }
 
 func (rancherClient *RancherBaseClientImpl) doById(schemaType string, id string, respObject interface{}) error {
+	var collectionUrl string
 	schema, ok := rancherClient.Types[schemaType]
 	if !ok {
 		return errors.New("Unknown schema type [" + schemaType + "]")
@@ -485,9 +486,10 @@ func (rancherClient *RancherBaseClientImpl) doById(schemaType string, id string,
 		return errors.New("Resource type [" + schemaType + "] can not be looked up by ID")
 	}
 
-	collectionUrl, ok := schema.Links[COLLECTION]
-	if !ok {
-		return errors.New("Failed to find collection URL for [" + schemaType + "]")
+	if collectionUrl, ok = schema.Links[COLLECTION]; !ok {
+		if collectionUrl, ok = schema.Links[SELF]; !ok {
+		  return errors.New("Failed to find collection and self  URL for [" + schemaType + "]")
+	  }
 	}
 
 	err := rancherClient.doGet(collectionUrl+"/"+id, nil, respObject)
@@ -518,7 +520,7 @@ func (rancherClient *RancherBaseClientImpl) doResourceDelete(schemaType string, 
 		id = rancherClient.Opts.AccountId + "/"
 	}
   selfUrl  =  strings.Replace(selfUrl, schema.PluralName, "projects/" + id + schema.PluralName , 1)
-	
+
 	return rancherClient.doDelete(selfUrl)
 }
 
